@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Simple Expense Tracker</title>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: lavenderblush;
+      margin: 0;
+      padding: 30px;
+      color: darkslategray;
+    }
+
+    h2 {
+      text-align: center;
+      color: rebeccapurple;
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      color: mediumpurple;
+      margin-top: 30px;
+    }
+
+    form, table, #summary {
+      background: floralwhite;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid thistle;
+      outline: none;
+      background: seashell;
+    }
+
+    input:focus {
+      border-color: plum;
+      box-shadow: 0 0 0 2px lavender;
+    }
+
+    /* ===== Attractive Button Styling ===== */
+    button {
+      background: linear-gradient(to right, peachpuff, lavender);
+      color: saddlebrown;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+    }
+
+    button:hover {
+      background: linear-gradient(to right, moccasin, plum);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+
+    button:active {
+      transform: scale(0.96);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th {
+      background: lavender;
+      color: indigo;
+      padding: 10px;
+      text-align: left;
+    }
+
+    td {
+      padding: 10px;
+      border-bottom: 1px solid lightgray;
+    }
+
+    tr:hover {
+      background: mistyrose;
+    }
+
+    td button {
+      margin-right: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      background: linear-gradient(to right, thistle, lavender);
+      color: indigo;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+    }
+
+    td button:hover {
+      background: linear-gradient(to right, plum, thistle);
+    }
+
+    .summary-controls {
+      margin-bottom: 10px;
+    }
+
+    #summary {
+      margin-top: 15px;
+      line-height: 1.6;
+      background: oldlace;
+      border: 1px solid peachpuff;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Expense Tracker</h2>
+
+<h3>Add Expense</h3>
+<form id="form">
+  <input id="customerId" placeholder="Customer ID" required>
+  <input id="category" placeholder="Category" required>
+  <input id="amount" type="number" placeholder="Amount" required>
+  <input id="date" type="date" required>
+  <input id="note" placeholder="Note">
+  <button type="submit">➕ Add Expense</button>
+</form>
+
+<h3>All Expenses</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Customer</th>
+      <th>Category</th>
+      <th>Amount</th>
+      <th>Note</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="list"></tbody>
+</table>
+
+<h3>Monthly Summary</h3>
+<div class="summary-controls">
+  Year:
+  <input id="sumYear" type="number" value="2025" style="width:80px">
+  Month:
+  <input id="sumMonth" type="number" min="1" max="12" value="12" style="width:60px">
+  <button id="btnSummary">📊 Get Summary</button>
+</div>
+
+<div id="summary"></div>
+
+<script>
+const api = (url, opts={}) =>
+  fetch(url, { headers:{'Content-Type':'application/json'}, ...opts })
+    .then(r => r.json());
+
+async function load() {
+  const data = await api('/expenses');
+  const tbody = document.getElementById('list');
+  tbody.innerHTML = '';
+  data.forEach(e => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${new Date(e.date).toLocaleDateString()}</td>
+      <td>${e.customerId}</td>
+      <td>${e.category}</td>
+      <td>${e.amount}</td>
+      <td>${e.note || ''}</td>
+      <td>
+        <button onclick="edit('${e._id}')">✏️ Edit</button>
+        <button onclick="del('${e._id}')">🗑️ Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('form').onsubmit = async (ev) => {
+  ev.preventDefault();
+  const body = {
+    customerId: customerId.value,
+    category: category.value,
+    amount: parseFloat(amount.value),
+    date: date.value,
+    note: note.value
+  };
+  await api('/expenses', { method:'POST', body: JSON.stringify(body) });
+  ev.target.reset();
+  load();
+};
+
+async function edit(id) {
+  const item = await api('/expenses/' + id);
+  const newAmount = prompt('Amount:', item.amount);
+  const newNote = prompt('Note:', item.note || '');
+  if (newAmount === null) return;
+
+  await api('/expenses/' + id, {
+    method: 'PUT',
+    body: JSON.stringify({ amount: parseFloat(newAmount), note: newNote })
+  });
+  load();
+}
+
+async function del(id) {
+  if (!confirm("Delete?")) return;
+  await api('/expenses/' + id, { method: 'DELETE' });
+  load();
+}
+
+document.getElementById('btnSummary').onclick = async () => {
+  const y = sumYear.value, m = sumMonth.value;
+  const s = await api('/summary/' + y + '/' + m);
+  summary.innerHTML =
+    "<strong>Total:</strong> " + (s.overallTotal || 0) +
+    "<br><br><strong>By Category:</strong><br>" +
+    (s.byCategory.map(c => `${c._id}: ${c.total} (x${c.count})`).join("<br>") || "No data");
+};
+
+load();
+</script>
+
+</body>
+</html>
