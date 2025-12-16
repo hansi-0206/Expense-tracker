@@ -213,4 +213,5 @@ It provides a strong foundation for advanced financial tracking systems.
 ## 📜 License
 
 This project is created **for educational purposes only**.
+## Screenshots<img width="1917" height="866" alt="0Expense" src="https://github.com/user-attachments/assets/24102cdb-5992-4dda-9ce0-2b01801fb09e" />
 
